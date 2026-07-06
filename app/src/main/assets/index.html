@@ -1,0 +1,3373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlashMind · Learn Anything, Faster</title>
+  <!-- Google Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
+  
+  <!-- Firebase JS SDK Compat CDN -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  
+  <style>
+    /* CSS VARIABLES & THEMING - Sophisticated Dark */
+    :root {
+      --bg-0: #05060f;
+      --bg-1: #03040a;
+      --bg-glass: rgba(255, 255, 255, 0.05);
+      --border-glass: rgba(255, 255, 255, 0.1);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      
+      --brand-primary-grad: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+      --active-cyan-grad: linear-gradient(135deg, #06b6d4 0%, #14b8a6 100%);
+      --alert-rose-grad: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
+      --warn-amber-grad: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+      
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-0);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* DEEP-SPACE BACKGROUND SYSTEM */
+    #spaceBackground {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: linear-gradient(185deg, var(--bg-0) 0%, var(--bg-1) 100%);
+      z-index: -3;
+    }
+
+    #particleCanvas {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      z-index: -2;
+      pointer-events: none;
+    }
+
+    .blur-orb {
+      position: fixed;
+      border-radius: 50%;
+      mix-blend-mode: screen;
+      filter: blur(80px);
+      opacity: 0.2;
+      z-index: -1;
+      pointer-events: none;
+    }
+    .orb-1 {
+      width: 400px; height: 400px;
+      background: rgba(99, 102, 241, 0.2); /* bg-indigo-600/20 style */
+      top: -100px; right: -50px;
+      animation: floatSlow 25s infinite alternate ease-in-out;
+    }
+    .orb-2 {
+      width: 350px; height: 350px;
+      background: rgba(6, 182, 212, 0.2); /* bg-cyan-500/20 style */
+      bottom: -100px; left: -50px;
+      animation: floatSlow 18s infinite alternate-reverse ease-in-out;
+    }
+
+    .noise-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    @keyframes floatSlow {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(40px, -30px) scale(1.1); }
+      100% { transform: translate(-20px, 40px) scale(0.9); }
+    }
+
+    /* GLASSMORPHISM CARD DEF */
+    .glass-card {
+      background: var(--bg-glass);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--border-glass);
+      border-radius: 24px; /* rounded-3xl / rounded-2xl style */
+      padding: 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); /* shadow-2xl style */
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 20px 25px -5px rgba(99, 102, 241, 0.15);
+    }
+
+    /* APP LAYOUT FRAMEWORK */
+    .app-wrapper {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* STICKY SIDEBAR NAVIGATION */
+    aside.sidebar {
+      width: 260px;
+      background: rgba(5, 6, 15, 0.85);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid var(--border-glass);
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      z-index: 100;
+    }
+
+    .brand-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+    .brand-logo {
+      font-size: 28px;
+      background: var(--brand-primary-grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand-name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: -0.5px;
+    }
+
+    .nav-links {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex-grow: 1;
+    }
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 16px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font-body);
+      font-weight: 500;
+      font-size: 15px;
+      border-radius: 12px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s ease;
+    }
+    .nav-btn .material-symbols-outlined {
+      font-size: 22px;
+    }
+    .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+    }
+    .nav-btn.active {
+      background: rgba(99, 102, 241, 0.15); /* bg-indigo-500/15 style */
+      color: #818cf8; /* text-indigo-400 */
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.15);
+    }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-glass);
+      border-radius: 14px;
+      margin-top: auto;
+    }
+    .user-avatar {
+      font-size: 24px;
+      background: rgba(99, 102, 241, 0.2);
+      padding: 6px;
+      border-radius: 10px;
+    }
+    .user-meta-info h4 {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .user-meta-info p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* BOTTOM UTILITY NAVIGATION BAR (MOBILE) - M3 Style */
+    .mobile-nav-bar {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 72px; /* standard mobile bottom nav height */
+      background: rgba(9, 11, 28, 0.85); /* bg-slate-900/60 style */
+      backdrop-filter: blur(24px);
+      border-top: 1px solid var(--border-glass);
+      z-index: 1000;
+      justify-content: space-around;
+      align-items: center;
+      padding: 0 16px;
+    }
+    .mobile-nav-btn {
+      background: transparent;
+      border: none;
+      color: #64748b; /* slate-500 */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      gap: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex: 1;
+    }
+    .mobile-nav-btn .material-symbols-outlined {
+      font-size: 22px;
+      padding: 4px 16px;
+      border-radius: 16px;
+      transition: all 0.25s;
+    }
+    .mobile-nav-btn.active {
+      color: #818cf8; /* text-indigo-400 */
+    }
+    .mobile-nav-btn.active .material-symbols-outlined {
+      background: rgba(99, 102, 241, 0.2); /* bg-indigo-500/20 active pill */
+      color: #818cf8; /* text-indigo-400 */
+    }
+
+    /* MAIN PANEL */
+    main.main-content {
+      flex-grow: 1;
+      padding: 40px 48px;
+      overflow-y: auto;
+      max-width: calc(100vw - 260px);
+    }
+
+    /* VIEW HEADER & TRANSITIONS */
+    .view-container {
+      display: none;
+      animation: fadeSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .view-container.active {
+      display: block;
+    }
+
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .view-header {
+      margin-bottom: 32px;
+    }
+    .view-header .category-badge {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: #818cf8; /* text-indigo-400 */
+      font-weight: 700;
+      display: inline-block;
+      margin-bottom: 8px;
+    }
+    .view-header h1 {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.025em; /* tracking-tight */
+      margin-bottom: 6px;
+    }
+    .view-header p {
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+
+    /* --- DASHBOARD VIEW --- */
+    .greeting-banner {
+      background: linear-gradient(135deg, rgba(49, 46, 129, 0.4) 0%, rgba(88, 28, 135, 0.4) 100%); /* from-indigo-900/40 to-purple-900/40 */
+      border: 1px solid rgba(99, 102, 241, 0.3); /* border-indigo-500/30 */
+      border-radius: 24px; /* rounded-3xl */
+      margin-bottom: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 28px;
+      overflow: hidden;
+      position: relative;
+    }
+    .greeting-text h2 {
+      font-family: var(--font-display);
+      font-size: 24px;
+      margin-bottom: 6px;
+      z-index: 1;
+    }
+    .greeting-text p {
+      color: var(--text-muted);
+      z-index: 1;
+    }
+
+    .streak-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-glass);
+      padding: 12px 20px;
+      border-radius: 16px;
+      z-index: 1;
+    }
+    .streak-label {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .streak-grid {
+      display: flex;
+      gap: 6px;
+    }
+    .streak-day {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #1e293b; /* bg-slate-800 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b; /* text-slate-500 */
+      transition: all 0.3s;
+    }
+    .streak-day.active {
+      background: #6366f1; /* bg-indigo-500 */
+      color: #fff;
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.5); /* shadow-[0_0_12px_rgba(124,92,255,0.5)] */
+    }
+    .streak-day.completed {
+      background: rgba(99, 102, 241, 0.2); /* bg-indigo-500/20 */
+      color: #818cf8; /* text-indigo-400 */
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+
+    .analytics-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    .metric-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .metric-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+    .metric-info h3 {
+      font-size: 24px;
+      font-weight: 700;
+      font-family: var(--font-display);
+    }
+    .metric-info p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* HIGH-TECH CANVAS CHART */
+    .chart-card {
+      margin-bottom: 32px;
+    }
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .chart-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .chart-controls {
+      display: flex;
+      gap: 8px;
+    }
+    .chart-toggle {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-glass);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .chart-toggle.active {
+      background: rgba(124, 92, 255, 0.15);
+      color: #fff;
+      border-color: rgba(124, 92, 255, 0.3);
+    }
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      height: 240px;
+    }
+    #analyticsCanvas {
+      width: 100%;
+      height: 100%;
+      background: rgba(255,255,255,0.01);
+      border-radius: 8px;
+    }
+
+    /* --- DECK LIBRARY VIEW --- */
+    .deck-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      gap: 16px;
+    }
+    .search-wrapper {
+      position: relative;
+      flex-grow: 1;
+      max-width: 400px;
+    }
+    .search-input {
+      width: 100%;
+      padding: 10px 16px 10px 42px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-glass);
+      border-radius: 10px;
+      color: #fff;
+      font-family: var(--font-body);
+    }
+    .search-wrapper .material-symbols-outlined {
+      position: absolute;
+      left: 14px; top: 10px;
+      color: var(--text-muted);
+    }
+    .deck-actions-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .action-btn {
+      background: #ffffff; /* pure white contrast */
+      color: #05060f; /* sophisticated dark text */
+      border: none;
+      padding: 12px 24px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .action-btn:hover {
+      transform: translateY(-1.5px);
+      box-shadow: 0 6px 20px rgba(255, 255, 255, 0.25);
+    }
+    .action-btn:active {
+      transform: scale(0.98);
+    }
+    .layout-toggle-btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-glass);
+      color: var(--text-muted);
+      padding: 10px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .layout-toggle-btn.active {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .deck-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    .deck-grid.list-view {
+      grid-template-columns: 1fr;
+    }
+
+    .deck-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 220px;
+    }
+    .deck-top h3 {
+      font-family: var(--font-display);
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+    .deck-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .tag-badge {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-glass);
+      font-size: 10px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      color: var(--text-muted);
+    }
+    .deck-card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-glass);
+      padding-top: 14px;
+      margin-top: auto;
+    }
+    .deck-btn-group {
+      display: flex;
+      gap: 8px;
+    }
+    .btn-small {
+      padding: 8px 14px;
+      font-size: 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      border: 1px solid var(--border-glass);
+      background: rgba(255, 255, 255, 0.02);
+      color: #fff;
+      transition: all 0.2s;
+    }
+    .btn-small.btn-primary {
+      background: #ffffff; /* premium white contrast */
+      border-color: #ffffff;
+      color: #05060f; /* sophisticated dark */
+      font-weight: 700;
+      box-shadow: 0 4px 10px rgba(255, 255, 255, 0.1);
+    }
+    .btn-small.btn-primary:hover {
+      background: #f1f5f9;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(255, 255, 255, 0.15);
+    }
+
+    /* --- EXPLORE VIEW --- */
+    .explore-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 24px;
+    }
+    .explore-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 240px;
+    }
+
+    /* --- GAMIFIED PROFILE & HEATMAP --- */
+    .profile-card {
+      margin-bottom: 32px;
+      display: flex;
+      gap: 32px;
+      align-items: center;
+    }
+    .profile-banner-avatar {
+      font-size: 64px;
+      background: rgba(124, 92, 255, 0.1);
+      padding: 20px;
+      border-radius: 24px;
+      border: 1px solid rgba(124, 92, 255, 0.2);
+    }
+    .profile-details h2 {
+      font-family: var(--font-display);
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+    .xp-bar-container {
+      width: 300px;
+      height: 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 8px 0;
+      border: 1px solid var(--border-glass);
+    }
+    .xp-bar-fill {
+      height: 100%;
+      background: var(--active-cyan-grad);
+      width: 60%;
+    }
+
+    .heatmap-card {
+      margin-bottom: 32px;
+    }
+    .heatmap-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    #heatmapContainer {
+      display: grid;
+      grid-template-rows: repeat(7, 10px);
+      grid-auto-flow: column;
+      gap: 3px;
+      overflow-x: auto;
+      padding: 10px 0;
+    }
+
+    .badges-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+    .badge-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(255,255,255,0.01);
+    }
+    .badge-card.locked {
+      opacity: 0.4;
+      filter: grayscale(1);
+    }
+    .badge-icon {
+      font-size: 32px;
+    }
+    .badge-info h4 {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .badge-info p {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* --- STUDY THEATER OVERLAY --- */
+    .study-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(5, 6, 15, 0.98);
+      backdrop-filter: blur(24px);
+      z-index: 5000;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .study-overlay.active {
+      display: flex;
+    }
+    .study-header {
+      position: absolute;
+      top: 24px; left: 0; right: 0;
+      padding: 0 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .study-progress-container {
+      width: 200px;
+      height: 8px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .study-progress-fill {
+      height: 100%;
+      background: var(--brand-primary-grad);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* 3D PERSPECTIVE CARDS */
+    .flashcard-wrapper {
+      perspective: 1000px;
+      width: 460px;
+      height: 300px;
+      cursor: pointer;
+      margin: 32px 0;
+    }
+    .flashcard-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      text-align: center;
+      transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      transform-style: preserve-3d;
+    }
+    .flashcard-inner.flipped {
+      transform: rotateY(180deg);
+    }
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 24px;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      border: 1px solid var(--border-glass);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+    }
+    .card-front {
+      background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 100%);
+      color: #fff;
+    }
+    .card-back {
+      background: linear-gradient(135deg, rgba(124, 92, 255, 0.12) 0%, rgba(168, 85, 247, 0.05) 100%);
+      color: #fff;
+      transform: rotateY(180deg);
+    }
+    .card-content {
+      font-size: 20px;
+      font-weight: 500;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    .card-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .rating-controls {
+      display: flex;
+      gap: 16px;
+      opacity: 0;
+      transform: translateY(15px);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+    .rating-controls.active {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .rate-btn {
+      padding: 12px 28px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      color: #fff;
+      transition: all 0.2s;
+    }
+    .rate-btn.hard { background: var(--alert-rose-grad); }
+    .rate-btn.good { background: var(--warn-amber-grad); }
+    .rate-btn.easy { background: var(--active-cyan-grad); }
+    .rate-btn:hover { transform: scale(1.05); }
+
+    .cleared-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      animation: fadeSlideUp 0.5s ease;
+    }
+    .cleared-icon {
+      font-size: 72px;
+      margin-bottom: 20px;
+      animation: pulseGlow 1.5s infinite alternate;
+    }
+
+    @keyframes pulseGlow {
+      from { transform: scale(1); filter: drop-shadow(0 0 10px #7c5cff); }
+      to { transform: scale(1.1); filter: drop-shadow(0 0 25px #a855f7); }
+    }
+
+    /* --- PRODUCTIVITY POMODORO VIEW --- */
+    .pomo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+    .clock-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .pomodoro-circle-wrapper {
+      position: relative;
+      width: 280px;
+      height: 280px;
+      margin-bottom: 24px;
+    }
+    .pomodoro-svg {
+      width: 100%; height: 100%;
+    }
+    .bg-ring {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.04);
+      stroke-width: 8;
+    }
+    .progress-ring {
+      fill: none;
+      stroke: url(#pomodoroGradient);
+      stroke-width: 8;
+      stroke-linecap: round;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+      stroke-dasharray: 565.48;
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 0.3s ease;
+    }
+    .timer-digits {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: var(--font-mono);
+      font-size: 44px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .pomo-mode-badge {
+      font-family: var(--font-display);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      background: rgba(124, 92, 255, 0.15);
+      border: 1px solid rgba(124, 92, 255, 0.3);
+      padding: 4px 16px;
+      border-radius: 20px;
+      margin-top: 10px;
+    }
+
+    .pomo-controls {
+      display: flex;
+      gap: 16px;
+    }
+    .btn-icon {
+      width: 54px; height: 54px;
+      border-radius: 50%;
+      border: 1px solid var(--border-glass);
+      background: rgba(255,255,255,0.02);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-icon:hover {
+      background: rgba(255,255,255,0.08);
+      transform: scale(1.05);
+    }
+    .btn-icon.play-btn {
+      background: var(--brand-primary-grad);
+      border: none;
+    }
+
+    /* --- FLOATING GLOBAL MICRO-WIDGET --- */
+    .floating-widget {
+      position: fixed;
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      background: rgba(10, 12, 31, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1.5px solid rgba(124, 92, 255, 0.4);
+      z-index: 999;
+      cursor: grab;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 15px rgba(124, 92, 255, 0.2);
+      user-select: none;
+    }
+    .floating-widget:active {
+      cursor: grabbing;
+      border-color: #06b6d4;
+    }
+    .widget-digits {
+      font-family: var(--font-mono);
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .widget-label {
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .widget-play {
+      background: none;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    .widget-play span {
+      font-size: 16px;
+    }
+
+    /* --- GEMINI CHAT BOT SIDE PANEL --- */
+    #geminiChatToggle {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      background: var(--brand-primary-grad);
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      box-shadow: 0 6px 20px rgba(124, 92, 255, 0.4);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #geminiChatToggle:hover {
+      transform: scale(1.1) rotate(5deg);
+    }
+
+    .chat-panel {
+      position: fixed;
+      top: 0; right: -420px;
+      width: 400px;
+      height: 100vh;
+      background: #05060f; /* Solid dark background to prevent visual bleed-through */
+      border-left: 1px solid var(--border-glass);
+      z-index: 2000;
+      transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      box-shadow: -10px 0 40px rgba(0, 0, 0, 0.85);
+    }
+    .chat-panel.active {
+      right: 0;
+    }
+    .chat-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--border-glass);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .chat-header h3 {
+      font-family: var(--font-display);
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .chat-header h3 span.badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(6, 182, 212, 0.15);
+      color: #06b6d4;
+    }
+    .chat-body {
+      flex-grow: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .chat-bubble {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: rgba(124, 92, 255, 0.15);
+      border: 1px solid rgba(124, 92, 255, 0.2);
+    }
+    .chat-bubble.bot {
+      align-self: flex-start;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-glass);
+    }
+    .chat-bubble p {
+      margin-bottom: 8px;
+    }
+    .chat-bubble p:last-child {
+      margin-bottom: 0;
+    }
+    .chat-bubble code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: rgba(255,255,255,0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .chat-bubble pre {
+      background: rgba(0,0,0,0.3);
+      padding: 12px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 8px 0;
+      border: 1px solid var(--border-glass);
+    }
+    .chat-bubble pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .chat-chips {
+      padding: 12px 24px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      border-top: 1px solid var(--border-glass);
+      scrollbar-width: none;
+    }
+    .chat-chip {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-glass);
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .chat-chip:hover {
+      background: rgba(124, 92, 255, 0.1);
+      color: #fff;
+    }
+
+    .chat-footer {
+      padding: 24px;
+      border-top: 1px solid var(--border-glass);
+      display: flex;
+      gap: 12px;
+    }
+    .chat-input {
+      flex-grow: 1;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-glass);
+      border-radius: 12px;
+      color: #fff;
+      font-family: var(--font-body);
+    }
+    .chat-send-btn {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      background: var(--brand-primary-grad);
+      border: none;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    /* MODAL WINDOWS */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(5,6,15,0.85);
+      backdrop-filter: blur(12px);
+      z-index: 4000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal-content {
+      width: 450px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-header h3 {
+      font-family: var(--font-display);
+      font-size: 20px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 12px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-glass);
+      border-radius: 10px;
+      color: #fff;
+      font-family: var(--font-body);
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .toast-container {
+      position: fixed;
+      bottom: 24px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 6000;
+      pointer-events: none;
+    }
+    .toast-alert {
+      background: var(--active-cyan-grad);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-weight: 600;
+      font-size: 14px;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+      animation: toastFade 3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes toastFade {
+      0% { opacity: 0; transform: translateY(20px); }
+      10% { opacity: 1; transform: translateY(0); }
+      90% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-20px); }
+    }
+
+    /* RESPONSIVE LAYOUT */
+    @media (max-width: 767px) {
+      aside.sidebar {
+        display: none;
+      }
+      .mobile-nav-bar {
+        display: flex;
+      }
+      main.main-content {
+        max-width: 100vw;
+        padding: 24px 20px 88px 20px;
+      }
+      .analytics-summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+      .deck-grid, .explore-grid {
+        grid-template-columns: 1fr;
+      }
+      .badges-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .pomo-grid {
+        grid-template-columns: 1fr;
+      }
+      .flashcard-wrapper {
+        width: 90vw;
+        height: 250px;
+      }
+      .chat-panel {
+        width: 100vw;
+        right: -100vw;
+      }
+      #geminiChatToggle {
+        bottom: 96px; /* Raised to clear standard mobile bottom nav bar */
+        right: 20px;
+      }
+    }
+
+    /* MINI AI COACH WIDGET STYLE */
+    .mini-ai-helper {
+      background: rgba(15, 23, 42, 0.85); /* bg-slate-900/80 style */
+      border: 1px solid rgba(255, 255, 255, 0.05); /* border-white/5 style */
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 24px;
+    }
+    .ai-avatar-wrapper {
+      position: relative;
+    }
+    .ai-avatar-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      background: rgba(99, 102, 241, 0.15); /* bg-indigo-500/20 style */
+      color: #818cf8; /* text-indigo-400 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ai-online-indicator {
+      position: absolute;
+      top: -2px; right: -2px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #10b981; /* emerald-500 */
+      border: 2px solid #05060f;
+    }
+    .ai-helper-text {
+      flex-grow: 1;
+      font-size: 13px;
+      color: #cbd5e1; /* text-slate-300 */
+      font-style: italic;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="spaceBackground"></div>
+  <canvas id="particleCanvas"></canvas>
+  <div class="blur-orb orb-1"></div>
+  <div class="blur-orb orb-2"></div>
+  <div class="noise-overlay"></div>
+
+  <!-- MAIN WRAPPER -->
+  <div class="app-wrapper">
+
+    <!-- DESKTOP SIDEBAR -->
+    <aside class="sidebar">
+      <div>
+        <div class="brand-container">
+          <span class="material-symbols-outlined brand-logo">lens_blur</span>
+          <h1 class="brand-name">FlashMind</h1>
+        </div>
+        <nav class="nav-links">
+          <button class="nav-btn active" onclick="switchView('dashboard')">
+            <span class="material-symbols-outlined">dashboard</span>
+            Dashboard
+          </button>
+          <button class="nav-btn" onclick="switchView('library')">
+            <span class="material-symbols-outlined">style</span>
+            Decks Library
+          </button>
+          <button class="nav-btn" onclick="switchView('explore')">
+            <span class="material-symbols-outlined">explore</span>
+            Explore Decks
+          </button>
+          <button class="nav-btn" onclick="switchView('pomodoro')">
+            <span class="material-symbols-outlined">schedule</span>
+            Focus Timer
+          </button>
+          <button class="nav-btn" onclick="switchView('profile')">
+            <span class="material-symbols-outlined">person</span>
+            Profile Stats
+          </button>
+        </nav>
+      </div>
+
+      <div class="user-pill" onclick="openAuthModal()" style="cursor: pointer; position: relative; transition: all 0.2s ease; border: 1px solid rgba(255,255,255,0.03);" title="Cloud Account & Backup">
+        <span class="user-avatar" id="sidebarAvatar">👑</span>
+        <div class="user-meta-info" style="flex-grow: 1;">
+          <h4 id="sidebarUserName">Commander Guest</h4>
+          <p id="sidebarXP">XP: 320 · Level 3</p>
+        </div>
+        <span class="material-symbols-outlined" style="font-size: 18px; color: var(--text-muted); margin-left: auto;">cloud_sync</span>
+      </div>
+    </aside>
+
+    <!-- MOBILE NAVIGATION -->
+    <div class="mobile-nav-bar">
+      <button class="mobile-nav-btn active" onclick="switchView('dashboard')">
+        <span class="material-symbols-outlined">dashboard</span>
+        Dashboard
+      </button>
+      <button class="mobile-nav-btn" onclick="switchView('library')">
+        <span class="material-symbols-outlined">style</span>
+        Decks
+      </button>
+      <button class="mobile-nav-btn" onclick="switchView('explore')">
+        <span class="material-symbols-outlined">explore</span>
+        Explore
+      </button>
+      <button class="mobile-nav-btn" onclick="switchView('pomodoro')">
+        <span class="material-symbols-outlined">schedule</span>
+        Timer
+      </button>
+      <button class="mobile-nav-btn" onclick="switchView('profile')">
+        <span class="material-symbols-outlined">person</span>
+        Profile
+      </button>
+    </div>
+
+    <!-- MAIN MAIN-CONTENT CONTENT -->
+    <main class="main-content">
+
+      <!-- DASHBOARD VIEW -->
+      <section id="view-dashboard" class="view-container active">
+        <div class="view-header">
+          <span class="category-badge">FlashMind Dashboard</span>
+          <h1 id="greetingMessage">Good morning, Commander</h1>
+          <p>Ready to accelerate your learning velocity today?</p>
+        </div>
+
+        <div class="glass-card greeting-banner" style="margin-bottom: 20px;">
+          <!-- Geometric Vector Backdrop -->
+          <div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none" style="z-index: 0;">
+            <svg style="width: 140px; height: 140px; color: #818cf8;" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M21 16.5C21 16.88 20.79 17.21 20.47 17.38L12.57 21.82C12.41 21.94 12.21 22 12 22C11.79 22 11.59 21.94 11.43 21.82L3.53 17.38C3.21 17.21 3 16.88 3 16.5V7.5C3 7.12 3.21 6.79 3.53 6.62L11.43 2.18C11.59 2.06 11.79 2 12 2C12.21 2 12.41 2.06 12.57 2.18L20.47 6.62C20.79 6.79 21 7.12 21 7.5V16.5Z"/>
+            </svg>
+          </div>
+          <div class="greeting-text" style="z-index: 1;">
+            <h2>Advance Your Cognitive Edge</h2>
+            <p>Ready to accelerate your learning velocity today? Focus on target categories, study cards with the SM-2 adaptive algorithm, and track your metrics.</p>
+          </div>
+        </div>
+
+        <!-- STANDALONE DAILY STREAK CARD -->
+        <div class="glass-card streak-card-standalone" style="margin-bottom: 24px; padding: 20px;">
+          <div class="streak-header-standalone" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px;">
+            <h3 style="font-size: 13px; font-weight: 700; color: #cbd5e1; display:flex; align-items:center; gap: 8px; margin: 0; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em;">
+              <span class="material-symbols-outlined" style="color:#f97316; font-size: 20px; font-variation-settings: 'FILL' 1;">local_fire_department</span>
+              7 Day Streak Tracker
+            </h3>
+            <span class="streak-days-count" id="streakDaysCountText" style="font-size: 12px; font-weight: 700; color: #f97316; background: rgba(249, 115, 22, 0.15); padding: 4px 10px; border-radius: 12px; font-family: var(--font-mono);">0 Days</span>
+          </div>
+          <div class="streak-grid" id="streakDayGrid">
+            <!-- Render dynamically -->
+          </div>
+        </div>
+
+        <div class="analytics-summary-grid">
+          <div class="glass-card metric-card">
+            <div class="metric-icon" style="background: var(--brand-primary-grad);">
+              <span class="material-symbols-outlined">layers</span>
+            </div>
+            <div class="metric-info">
+              <h3 id="statTotalDecks">3</h3>
+              <p>Total Decks</p>
+            </div>
+          </div>
+          <div class="glass-card metric-card">
+            <div class="metric-icon" style="background: var(--active-cyan-grad);">
+              <span class="material-symbols-outlined">check_circle</span>
+            </div>
+            <div class="metric-info">
+              <h3 id="statReviews">42</h3>
+              <p>Reviews Completed</p>
+            </div>
+          </div>
+          <div class="glass-card metric-card">
+            <div class="metric-icon" style="background: var(--warn-amber-grad);">
+              <span class="material-symbols-outlined">bolt</span>
+            </div>
+            <div class="metric-info">
+              <h3 id="statXP">320</h3>
+              <p>XP Earned</p>
+            </div>
+          </div>
+          <div class="glass-card metric-card">
+            <div class="metric-icon" style="background: var(--alert-rose-grad);">
+              <span class="material-symbols-outlined">stars</span>
+            </div>
+            <div class="metric-info">
+              <h3 id="statMilestones">2</h3>
+              <p>Achievements</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Velocity & Review Analytics</div>
+            <div class="chart-controls">
+              <button class="chart-toggle active" onclick="toggleChartRange(7, this)">7 Days</button>
+              <button class="chart-toggle" onclick="toggleChartRange(30, this)">30 Days</button>
+              <button class="chart-toggle" onclick="toggleChartRange(90, this)">90 Days</button>
+            </div>
+          </div>
+          <div class="canvas-container">
+            <canvas id="analyticsCanvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Mini AI Helper -->
+        <div class="mini-ai-helper">
+          <div class="ai-avatar-wrapper">
+            <div class="ai-avatar-icon">
+              <span class="material-symbols-outlined" style="font-size:20px;">bolt</span>
+            </div>
+            <div class="ai-online-indicator"></div>
+          </div>
+          <p class="ai-helper-text" id="aiCoachText">"Welcome back, Scholar! Let's target your weakest retention links and power up your streak today."</p>
+        </div>
+      </section>
+
+      <!-- LIBRARY VIEW -->
+      <section id="view-library" class="view-container">
+        <div class="view-header">
+          <span class="category-badge">Private Modules</span>
+          <h1>Your Flash Decks</h1>
+          <p>Organize, create, and study categorized flashcards locally.</p>
+        </div>
+
+        <div class="deck-controls">
+          <div class="search-wrapper">
+            <span class="material-symbols-outlined">search</span>
+            <input type="text" id="deckSearch" class="search-input" placeholder="Search decks or categories..." oninput="renderLibraryDecks()">
+          </div>
+          <div class="deck-actions-right">
+            <button class="layout-toggle-btn active" id="btnGrid" onclick="toggleLibraryLayout('grid')">
+              <span class="material-symbols-outlined">grid_view</span>
+            </button>
+            <button class="layout-toggle-btn" id="btnList" onclick="toggleLibraryLayout('list')">
+              <span class="material-symbols-outlined">view_list</span>
+            </button>
+            <button class="action-btn" onclick="openModal('createDeckModal')">
+              <span class="material-symbols-outlined">add</span> Create Deck
+            </button>
+          </div>
+        </div>
+
+        <div class="deck-grid" id="decksLibraryGrid">
+          <!-- Dynamically Rendered -->
+        </div>
+      </section>
+
+      <!-- EXPLORE VIEW -->
+      <section id="view-explore" class="view-container">
+        <div class="view-header">
+          <span class="category-badge">Curation Engine</span>
+          <h1>Discovery Repositories</h1>
+          <p>Import curated expert deck archives instantly to your active profile.</p>
+        </div>
+
+        <div class="chat-chips" style="padding: 0 0 24px 0;">
+          <button class="chat-chip active" onclick="filterExploreDecks('all', this)">All curations</button>
+          <button class="chat-chip" onclick="filterExploreDecks('tech', this)">Technology</button>
+          <button class="chat-chip" onclick="filterExploreDecks('med', this)">Medical</button>
+          <button class="chat-chip" onclick="filterExploreDecks('lang', this)">Languages</button>
+        </div>
+
+        <div class="explore-grid" id="exploreDecksGrid">
+          <!-- Curated Explore decks -->
+        </div>
+      </section>
+
+      <!-- FOCUS TIMER VIEW -->
+      <section id="view-pomodoro" class="view-container">
+        <div class="view-header">
+          <span class="category-badge">Temporal Focus Sprints</span>
+          <h1>Productivity Matrix</h1>
+          <p>Harness the Pomodoro focused-study intervals with seamless ticking indicators.</p>
+        </div>
+
+        <div class="pomo-grid">
+          <div class="glass-card clock-column">
+            <div class="pomodoro-circle-wrapper">
+              <svg class="pomodoro-svg" viewBox="0 0 200 200">
+                <defs>
+                  <linearGradient id="pomodoroGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#7c5cff" />
+                    <stop offset="100%" stop-color="#06b6d4" />
+                  </linearGradient>
+                </defs>
+                <circle cx="100" cy="100" r="90" class="bg-ring" />
+                <circle cx="100" cy="100" r="90" class="progress-ring" id="pomoProgressRing" />
+              </svg>
+              <div class="timer-digits" id="pomoDigits">25:00</div>
+            </div>
+            <div class="pomo-mode-badge" id="pomoModeBadge">WORK FRAME</div>
+            <div class="pomo-controls" style="margin-top: 24px;">
+              <button class="btn-icon" onclick="resetPomo()">
+                <span class="material-symbols-outlined">replay</span>
+              </button>
+              <button class="btn-icon play-btn" id="pomoPlayBtn" onclick="togglePomo()">
+                <span class="material-symbols-outlined">play_arrow</span>
+              </button>
+              <button class="btn-icon" onclick="skipPomoMode()">
+                <span class="material-symbols-outlined">skip_next</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="glass-card" style="display: flex; flex-direction: column; justify-content: center; gap: 20px;">
+            <h3 style="font-family: var(--font-display); font-size: 20px;">Focus Parameters</h3>
+            <p style="color: var(--text-muted); font-size: 14px;">The Pomodoro technique splits study cycles into 25-minute extreme focus sprints followed by a 5-minute cognitive cool-down recovery phase.</p>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Work Sprint (Mins)</label>
+                <input type="number" id="pomoWorkSetting" class="form-input" value="25" min="1" max="120" onchange="applyCustomPomoSettings()">
+              </div>
+              <div class="form-group">
+                <label>Break Cycle (Mins)</label>
+                <input type="number" id="pomoBreakSetting" class="form-input" value="5" min="1" max="60" onchange="applyCustomPomoSettings()">
+              </div>
+            </div>
+            <div style="border-top: 1px solid var(--border-glass); padding-top: 16px;">
+              <p style="font-size: 13px;">Sessions Completed Today: <strong id="pomoSessionStat">4</strong></p>
+              <p style="font-size: 13px; margin-top: 6px;">Total Focus Duration: <strong id="pomoMinutesStat">100</strong> mins</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PROFILE STATS VIEW -->
+      <section id="view-profile" class="view-container">
+        <div class="view-header">
+          <span class="category-badge">Scholar Telemetry</span>
+          <h1>Commander Profile</h1>
+          <p>Your gamified statistics, badge accomplishments, and historical contributions grid.</p>
+        </div>
+
+        <div class="glass-card profile-card">
+          <span class="profile-banner-avatar" id="profileBadgeAvatar">👑</span>
+          <div class="profile-details">
+            <h2 id="profileName">Commander Guest</h2>
+            <p style="color: var(--text-muted); font-size: 14px;" id="profileLevelText">Level 3 Scholar · Experience Point Engine</p>
+            <div class="xp-bar-container">
+              <div class="xp-bar-fill" id="profileXPBar"></div>
+            </div>
+            <p style="font-size: 12px; font-family: var(--font-mono);" id="profileXPRaw">320 / 500 XP to next level</p>
+          </div>
+        </div>
+
+        <!-- CLOUD BACKUP & SYNC CARD -->
+        <div class="glass-card" style="margin-top: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; color: #818cf8;">
+              <span class="material-symbols-outlined" style="font-size: 24px;">cloud_sync</span>
+            </div>
+            <div>
+              <h3 style="font-size: 15px; font-weight: 700; margin: 0; font-family: var(--font-display);">Cloud Sync Engine</h3>
+              <p style="font-size: 12px; color: var(--text-muted); margin: 4px 0 0 0;" id="cloudSyncStatus">Status: Offline guest profile</p>
+            </div>
+          </div>
+          <button class="btn-small btn-primary" id="profileAuthBtn" onclick="openAuthModal()" style="font-weight: 700; margin: 0;">
+            Sign In to Sync
+          </button>
+        </div>
+
+        <!-- 365-DAY GRID HEATMAP -->
+        <div class="glass-card heatmap-card">
+          <div class="heatmap-header">
+            <h3 style="font-family: var(--font-display); font-size: 18px;">Contribution Matrix (365 Days)</h3>
+            <p style="font-size: 12px; color: var(--text-muted);">Historical review density logs</p>
+          </div>
+          <div id="heatmapContainer">
+            <!-- Render 365 grids dynamically -->
+          </div>
+        </div>
+
+        <div class="view-header" style="margin-top: 40px; margin-bottom: 20px;">
+          <h2>Achievement Ledger</h2>
+        </div>
+        <div class="badges-grid" id="achievementsGrid">
+          <!-- Dynamically populated badge matrices -->
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- FLOATING GLOBAL MICRO-WIDGET -->
+  <div class="floating-widget" id="draggableWidget">
+    <div class="widget-digits" id="widgetDigits">25:00</div>
+    <div class="widget-label" id="widgetLabel">Focus</div>
+    <button class="widget-play" onclick="togglePomo()">
+      <span class="material-symbols-outlined" id="widgetPlayIcon">play_arrow</span>
+    </button>
+  </div>
+
+  <!-- FLOATING GEMINI AI TUTOR TOGGLE -->
+  <button id="geminiChatToggle" onclick="toggleChatPanel()">
+    <span class="material-symbols-outlined" style="font-size: 28px;">psychology</span>
+  </button>
+
+  <!-- GEMINI AI CHAT SLIDE OUT PANEL -->
+  <div class="chat-panel" id="geminiChatPanel">
+    <div class="chat-header">
+      <h3>
+        <span class="material-symbols-outlined" style="color: #a855f7;">psychology_alt</span>
+        FlashMind AI
+        <span class="badge">gemini-3.5-flash</span>
+      </h3>
+      <button onclick="toggleChatPanel()" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    
+    <div class="chat-body" id="chatMessageFlow">
+      <div class="chat-bubble bot">
+        Greetings! I am FlashMind AI, your intelligent study companion.
+        <br><br>
+        Ask me to explain complex topics, summarize, or generate custom study flashcards using this format:
+        <br>
+        <code>Q: [Your Question] | A: [Your Answer]</code>
+      </div>
+    </div>
+
+    <!-- Suggested Quick Chips -->
+    <div class="chat-chips">
+      <div class="chat-chip" onclick="sendQuickChip('Explain the difference between CSR and SSR')">CSR vs SSR</div>
+      <div class="chat-chip" onclick="sendQuickChip('Generate 3 Javascript closure questions')">Closure Quiz</div>
+      <div class="chat-chip" onclick="sendQuickChip('How can I optimize study intervals with SM-2?')">SM-2 Help</div>
+    </div>
+
+    <div class="chat-footer">
+      <input type="text" class="chat-input" id="chatInputField" placeholder="Ask FlashMind AI to generate cards..." onkeydown="handleChatEnter(event)">
+      <button class="chat-send-btn" onclick="triggerChatSubmit()">
+        <span class="material-symbols-outlined">send</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TOAST ALERTS -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Cloud Authentication / Login Modal -->
+  <div class="modal-overlay" id="authModal">
+    <div class="glass-card modal-content" style="max-width: 420px; width: 90%; padding: 24px; box-sizing: border-box;">
+      <div class="modal-header">
+        <h3 id="authModalTitle" style="font-family: var(--font-display); font-size: 20px; margin: 0;">Cloud Sync Portal</h3>
+        <button onclick="closeModal('authModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding: 4px;">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- Logged Out View (Form) -->
+      <div id="authLoggedOutView">
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5;">
+          Synchronize your custom study decks, daily streaks, pomodoro settings, and XP progression logs securely in the cloud.
+        </p>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label>Email Address</label>
+          <input type="email" id="authEmail" class="form-input" placeholder="you@domain.com">
+        </div>
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label>Password</label>
+          <input type="password" id="authPassword" class="form-input" placeholder="••••••••">
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 24px;">
+          <button class="action-btn" id="signInBtn" onclick="handleEmailSignIn()" style="width: 100%; justify-content: center;">
+            <span class="material-symbols-outlined">login</span> Log In
+          </button>
+          <button class="btn-small" id="signUpBtn" onclick="handleEmailSignUp()" style="width: 100%; font-weight: 700;">
+            Create New Account
+          </button>
+          <div style="text-align: center; margin: 8px 0;">
+            <span style="font-size: 12px; color: var(--text-muted);">or</span>
+          </div>
+          <button class="btn-small" onclick="handleAnonymousSignIn()" style="width: 100%; border-color: rgba(99, 102, 241, 0.3); display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <span class="material-symbols-outlined" style="font-size: 16px;">key</span>
+            Continue as Anonymous Cloud Guest
+          </button>
+        </div>
+
+        <!-- ADVANCED CONFIG OVERRIDE (COLLAPSIBLE) -->
+        <details style="margin-top: 20px; border-top: 1px solid var(--border-glass); padding-top: 12px; text-align: left;">
+          <summary style="font-size: 12px; color: var(--text-muted); cursor: pointer; user-select: none;">
+            Use Custom Firebase Project Coordinates
+          </summary>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+            <input type="text" id="fbApiKey" class="form-input" style="font-size: 11px; padding: 8px 10px;" placeholder="API Key (apiKey)">
+            <input type="text" id="fbProjectId" class="form-input" style="font-size: 11px; padding: 8px 10px;" placeholder="Project ID (projectId)">
+            <button class="btn-small" onclick="saveCustomFirebaseConfig()" style="font-size: 11px; padding: 6px; width: 100%; font-weight: 700; background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.3);">
+              Apply & Re-initialize Database
+            </button>
+          </div>
+        </details>
+      </div>
+
+      <!-- Logged In View -->
+      <div id="authLoggedInView" style="display: none; text-align: center; padding: 10px 0;">
+        <span class="material-symbols-outlined" style="font-size: 48px; color: #10b981; margin-bottom: 12px; font-variation-settings: 'FILL' 1;">cloud_done</span>
+        <h4 id="authActiveUserEmail" style="font-size: 16px; margin-bottom: 6px; font-family: var(--font-display); font-weight: 700;">user@domain.com</h4>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5;">
+          Your profile is currently synchronized with secure Firebase Cloud Storage. All progress will be loaded automatically on any device.
+        </p>
+        <div style="display: flex; gap: 12px;">
+          <button class="btn-small" onclick="forceCloudSync()" style="flex:1; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <span class="material-symbols-outlined" style="font-size: 16px;">sync</span> Sync Now
+          </button>
+          <button class="action-btn" onclick="handleSignOut()" style="flex:1; justify-content: center; background: #ef4444; color: white;">
+            <span class="material-symbols-outlined">logout</span> Log Out
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALS -->
+  <!-- Create Deck Modal -->
+  <div class="modal-overlay" id="createDeckModal">
+    <div class="glass-card modal-content">
+      <div class="modal-header">
+        <h3>Create Curated Deck</h3>
+        <button onclick="closeModal('createDeckModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="form-group">
+        <label>Deck Title</label>
+        <input type="text" id="newDeckName" class="form-input" placeholder="e.g., Quantum Mechanics">
+      </div>
+      <div class="form-group">
+        <label>Primary Tags (Comma separated)</label>
+        <input type="text" id="newDeckTags" class="form-input" placeholder="physics, science, advanced">
+      </div>
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <button class="btn-small" onclick="closeModal('createDeckModal')" style="flex:1;">Cancel</button>
+        <button class="action-btn" onclick="saveNewDeck()" style="flex:1; justify-content:center;">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card Injector / List Manager Modal -->
+  <div class="modal-overlay" id="cardManagerModal">
+    <div class="glass-card modal-content" style="width: 500px; max-height: 85vh; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <h3 id="managerDeckTitle">Manage Cards</h3>
+        <button onclick="closeModal('cardManagerModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      
+      <!-- List of cards -->
+      <div style="flex-grow: 1; overflow-y: auto; margin-bottom: 20px; max-height: 40vh; padding-right: 8px;" id="managerCardsList">
+        <!-- Cards injected dynamically -->
+      </div>
+
+      <div style="border-top: 1px solid var(--border-glass); padding-top: 16px;">
+        <h4 style="font-size: 14px; margin-bottom: 12px; font-family: var(--font-display);">Inject New Pair</h4>
+        <div class="form-group">
+          <label>Question Face</label>
+          <input type="text" id="newCardFront" class="form-input" placeholder="The question to challenge yourself with">
+        </div>
+        <div class="form-group">
+          <label>Answer Back</label>
+          <input type="text" id="newCardBack" class="form-input" placeholder="The clear, condensed answer block">
+        </div>
+        <button class="action-btn" onclick="injectNewCardToDeck()" style="width: 100%; justify-content: center; margin-top: 8px;">
+          <span class="material-symbols-outlined">add_card</span> Inject Card
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STUDY THEATER OVERLAY -->
+  <div class="study-overlay" id="studyTheater">
+    <div class="study-header">
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <h2 id="studyDeckTitle" style="font-family: var(--font-display); font-size: 20px;">Study Mode</h2>
+        <div class="study-progress-container">
+          <div class="study-progress-fill" id="studyProgressBar"></div>
+        </div>
+        <span id="studyProgressRatio" style="font-size: 12px; color: var(--text-muted);">0 / 0</span>
+      </div>
+      <button onclick="exitStudyTheater()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; display:flex;">
+        <span class="material-symbols-outlined" style="font-size: 32px;">close</span>
+      </button>
+    </div>
+
+    <!-- Active Card Frame -->
+    <div id="activeStudyFrame" style="display:flex; flex-direction:column; align-items:center;">
+      <div class="flashcard-wrapper" onclick="flipActiveCard()">
+        <div class="flashcard-inner" id="flashcardInner">
+          <div class="card-face card-front">
+            <div class="card-hint">Challenge (Front)</div>
+            <div class="card-content" id="studyFrontText">How does closures work?</div>
+            <div style="margin-top:auto; font-size:12px; color:var(--text-muted);">Click to Flip</div>
+          </div>
+          <div class="card-face card-back">
+            <div class="card-hint">Verification (Back)</div>
+            <div class="card-content" id="studyBackText">A closure is a combination of outer scope variable persistence inside an inner function lexical environment.</div>
+            <div style="margin-top:auto; font-size:12px; color:var(--text-muted);">Rate your recollection quality</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rating grading buttons -->
+      <div class="rating-controls" id="ratingControls">
+        <button class="rate-btn hard" onclick="gradeActiveCard(1)">Hard (Interval reset)</button>
+        <button class="rate-btn good" onclick="gradeActiveCard(3)">Good (Maintain)</button>
+        <button class="rate-btn easy" onclick="gradeActiveCard(5)">Easy (Boost)</button>
+      </div>
+    </div>
+
+    <!-- Celebration Screen -->
+    <div class="cleared-container" id="studyClearedScreen">
+      <div class="cleared-icon">✨</div>
+      <h2 style="font-family: var(--font-display); font-size: 32px; margin-bottom: 12px;">Deck Accomplished!</h2>
+      <p style="color:var(--text-muted); font-size:16px; max-width: 400px; margin-bottom: 32px;">Excellent recall speed! You have earned +50 Experience points and synced metrics with your SM-2 core planner.</p>
+      <button class="action-btn" onclick="exitStudyTheater()">
+        <span class="material-symbols-outlined">done_all</span> Back to Dashboard
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // --- STATE MANAGEMENT ---
+    let FlashMindState = {
+      user: {
+        name: "Guest Scholar",
+        xp: 320,
+        streak: 5,
+        lastActive: "",
+        avatar: "👑",
+        level: 3
+      },
+      decks: [],
+      pomodoro: {
+        timeLeft: 1500,
+        duration: 1500,
+        isActive: false,
+        sessionCount: 4,
+        focusMinutes: 100,
+        mode: "work", // work or break
+        workMins: 25,
+        breakMins: 5
+      },
+      reviewsHistory: {}, // YYYY-MM-DD -> count
+      chatHistory: []
+    };
+
+    let activeView = "dashboard";
+    let pomoInterval = null;
+    let particleDots = [];
+    let currentSelectedDeckId = null;
+    let currentStudyCards = [];
+    let currentStudyIndex = 0;
+    let currentChartRange = 7;
+    let currentExploreFilter = "all";
+    let isDragging = false;
+    let dragStartX = 0, dragStartY = 0, widgetStartX = 0, widgetStartY = 0;
+
+    // --- DEFAULT INITIAL SEED DATA ---
+    const DEFAULT_DECKS = [
+      {
+        id: "deck-1",
+        name: "Full-Stack Web Development",
+        tags: ["programming", "web", "js"],
+        cards: [
+          { id: "c1", front: "What is the key difference between CSR and SSR?", back: "CSR renders pages in browser client-side using JS, while SSR pre-renders pages on the server and loads raw static HTML.", difficulty: "medium", interval: 0, easeFactor: 2.5, repetitions: 0, nextReview: 0 },
+          { id: "c2", front: "Explain lexical closures in Javascript.", back: "A closure is the preservation of an inner function reference to its enclosing parent lexical scope variables even after outer scope execution ends.", difficulty: "hard", interval: 0, easeFactor: 2.5, repetitions: 0, nextReview: 0 },
+          { id: "c3", front: "What are the core benefits of CSS Custom Properties?", back: "They offer dynamic component-scoped variables, facilitate full dark/light theme switching, and allow real-time access through JS.", difficulty: "easy", interval: 0, easeFactor: 2.5, repetitions: 0, nextReview: 0 }
+        ]
+      },
+      {
+        id: "deck-2",
+        name: "Medical Terminology Core",
+        tags: ["medicine", "biology", "anatomy"],
+        cards: [
+          { id: "c4", front: "What does the root prefix 'Myo-' imply in medical sciences?", back: "Myo- directly relates to muscle. For example, Myocardium implies cardiac muscle tissue.", difficulty: "medium", interval: 0, easeFactor: 2.5, repetitions: 0, nextReview: 0 },
+          { id: "c5", front: "Define 'Atherosclerosis' clinical mechanism.", back: "An inflammatory condition marked by the hardening and progressive occlusion of arterial walls due to fat/cholesterol plaque deposition.", difficulty: "hard", interval: 0, easeFactor: 2.5, repetitions: 0, nextReview: 0 },
+          { id: "c6", front: "What is the clinical meaning of the suffix '-itis'?", back: "-itis strictly indicates inflammation of tissue, e.g. Appendicitis or Gastritis.", difficulty: "easy", interval: 0, easeFactor: 2.5, repetitions: 0, nextReview: 0 }
+        ]
+      },
+      {
+        id: "deck-3",
+        name: "Spanish Advanced Idioms",
+        tags: ["languages", "spanish", "vocab"],
+        cards: [
+          { id: "c7", front: "How do you translate the English idiom 'To dream about...' to Spanish?", back: "The phrase is 'Soñar con...'. Example: 'Sueño con el crepúsculo.' (I dream about the twilight).", difficulty: "medium", interval: 0, easeFactor: 2.5, repetitions: 0, nextReview: 0 },
+          { id: "c8", front: "Define and translate the word 'Acontecimiento'.", back: "An event, noteworthy happening, or milestone occurrence.", difficulty: "hard", interval: 0, easeFactor: 2.5, repetitions: 0, nextReview: 0 }
+        ]
+      }
+    ];
+
+    const EXPLORE_DECKS_CURATED = [
+      {
+        id: "exp-1",
+        category: "tech",
+        name: "AI Prompt Engineering",
+        desc: "Master system instructions, dynamic parameters, and zero-shot reasoning structures.",
+        cardsCount: 8,
+        author: "OpenAI Mentor",
+        cards: [
+          { id: "e1", front: "What is 'Few-Shot' prompting?", back: "Few-shot prompts provide explicit sample inputs and outputs within the prompt context before eliciting the final model prediction.", difficulty: "easy", interval: 0, easeFactor: 2.5, repetitions: 0, nextReview: 0 },
+          { id: "e2", front: "Explain 'Chain-of-Thought' prompting reasoning.", back: "Instructs the LLM to write out structural intermediate logical reasoning steps before generating final terminal values.", difficulty: "medium", interval: 0, easeFactor: 2.5, repetitions: 0, nextReview: 0 }
+        ]
+      },
+      {
+        id: "exp-2",
+        category: "lang",
+        name: "German Conversational A2",
+        desc: "Essential grammatical clauses, conjunction templates, and high-frequency colloquialisms.",
+        cardsCount: 15,
+        author: "Berlin Lingua",
+        cards: [
+          { id: "e3", front: "Translate and explain the usage of 'Weil'.", back: "'Weil' translates to 'because' and triggers subordinate clause verb-final word ordering.", difficulty: "medium", interval: 0, easeFactor: 2.5, repetitions: 0, nextReview: 0 }
+        ]
+      },
+      {
+        id: "exp-3",
+        category: "med",
+        name: "Clinical Pathologies 101",
+        desc: "Diagnostics criteria, symptom patterns, and emergency triage priority vectors.",
+        cardsCount: 12,
+        author: "Johns Hopkins Alum",
+        cards: [
+          { id: "e4", front: "What is the classic diagnostic triad of Cardiac Tamponade?", back: "Beck's Triad: Hypotension, JVD, and muffled heart sounds.", difficulty: "hard", interval: 0, easeFactor: 2.5, repetitions: 0, nextReview: 0 }
+        ]
+      }
+    ];
+
+    // --- INITIALIZATION ---
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      initFirebase();
+      initializeBackgroundParticles();
+      switchView('dashboard');
+      initializeDraggableWidget();
+      checkDailyStreak();
+    });
+
+    // --- LOCAL STORAGE STATE CORE ---
+    function loadState() {
+      const saved = localStorage.getItem('FlashMindState_V2');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.decks && parsed.decks.length > 0) {
+            FlashMindState = parsed;
+          } else {
+            FlashMindState.user = parsed.user || FlashMindState.user;
+            FlashMindState.pomodoro = parsed.pomodoro || FlashMindState.pomodoro;
+            FlashMindState.reviewsHistory = parsed.reviewsHistory || FlashMindState.reviewsHistory;
+            FlashMindState.decks = DEFAULT_DECKS;
+          }
+        } catch (e) {
+          FlashMindState.decks = DEFAULT_DECKS;
+        }
+      } else {
+        FlashMindState.decks = DEFAULT_DECKS;
+        // Mock reviews density logs for initial look
+        const todayStr = new Date().toISOString().split('T')[0];
+        const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        const day2 = new Date(); day2.setDate(day2.getDate() - 4);
+        const day2Str = day2.toISOString().split('T')[0];
+        
+        FlashMindState.reviewsHistory[todayStr] = 4;
+        FlashMindState.reviewsHistory[yesterdayStr] = 8;
+        FlashMindState.reviewsHistory[day2Str] = 12;
+        
+        saveState();
+      }
+      applyProfileElements();
+    }
+
+    function saveState() {
+      localStorage.setItem('FlashMindState_V2', JSON.stringify(FlashMindState));
+      applyProfileElements();
+      
+      // Auto Cloud Sync if Firebase session is active
+      if (isFirebaseActive && auth && auth.currentUser) {
+        syncDataToCloud(auth.currentUser.uid);
+      }
+    }
+
+    // --- FIREBASE ENGINE CODE ---
+    let db = null;
+    let auth = null;
+    let isFirebaseActive = false;
+
+    // Default Sandbox Config coordinates
+    const fallbackFirebaseConfig = {
+      apiKey: "AIzaSyD_mock_api_key_for_flashmind_v2",
+      authDomain: "flashmind-axzkqy.firebaseapp.com",
+      projectId: "flashmind-axzkqy",
+      storageBucket: "flashmind-axzkqy.appspot.com",
+      messagingSenderId: "9876543210",
+      appId: "1:9876543210:web:abcdef123456789"
+    };
+
+    function initFirebase() {
+      if (typeof firebase === 'undefined') {
+        console.warn("Firebase SDK compat scripts not available.");
+        return;
+      }
+      try {
+        let config = fallbackFirebaseConfig;
+        const custom = localStorage.getItem('FlashMind_CustomFirebase');
+        if (custom) {
+          try {
+            const parsed = JSON.parse(custom);
+            if (parsed && parsed.apiKey && parsed.projectId) {
+              config = {
+                apiKey: parsed.apiKey,
+                authDomain: `${parsed.projectId}.firebaseapp.com`,
+                projectId: parsed.projectId,
+                storageBucket: `${parsed.projectId}.appspot.com`,
+                messagingSenderId: "123456789",
+                appId: "1:123456789:web:custom"
+              };
+            }
+          } catch (e) {
+            console.error("Custom FB config parse error:", e);
+          }
+        }
+        
+        let app;
+        if (firebase.apps.length === 0) {
+          app = firebase.initializeApp(config);
+        } else {
+          app = firebase.app();
+        }
+        
+        auth = firebase.auth();
+        db = firebase.firestore();
+        isFirebaseActive = true;
+        
+        auth.onAuthStateChanged(async (user) => {
+          if (user) {
+            handleUserSignedIn(user);
+          } else {
+            handleUserSignedOut();
+          }
+        });
+        
+        console.log("Firebase initialized successfully with project ID:", config.projectId);
+      } catch (err) {
+        console.error("Firebase initialization failed:", err);
+        isFirebaseActive = false;
+        updateCloudSyncUI(false, "Offline: Config Needed");
+      }
+    }
+
+    async function syncDataToCloud(uid) {
+      if (!isFirebaseActive || !db) return;
+      try {
+        const payload = {
+          user: FlashMindState.user,
+          decks: FlashMindState.decks,
+          reviewsHistory: FlashMindState.reviewsHistory,
+          chatHistory: FlashMindState.chatHistory,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        await db.collection('users').doc(uid).set(payload, { merge: true });
+        console.log("State synced to Firestore!");
+        updateCloudSyncUI(true, "Profile Synced");
+      } catch (err) {
+        console.error("Failed to sync Firestore data:", err);
+        updateCloudSyncUI(false, "Sync Error: Local Fallback");
+      }
+    }
+
+    async function handleUserSignedIn(user) {
+      const email = user.isAnonymous ? "Cloud Guest" : user.email;
+      
+      document.getElementById('authLoggedOutView').style.display = 'none';
+      document.getElementById('authLoggedInView').style.display = 'block';
+      document.getElementById('authActiveUserEmail').innerText = email;
+      
+      updateCloudSyncUI(true, user.isAnonymous ? "Cloud Guest Connected" : `Logged In: ${email}`);
+      
+      if (!user.isAnonymous && user.email) {
+        FlashMindState.user.name = user.email.split('@')[0];
+        FlashMindState.user.avatar = "🔮";
+      } else {
+        FlashMindState.user.name = "Anonymous Scholar";
+        FlashMindState.user.avatar = "👥";
+      }
+      
+      try {
+        const docRef = db.collection('users').doc(user.uid);
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+          const cloudData = docSnap.data();
+          if (cloudData) {
+            console.log("Firestore state loaded! Merging with local storage...");
+            if (cloudData.user) FlashMindState.user = cloudData.user;
+            if (cloudData.decks && cloudData.decks.length > 0) FlashMindState.decks = cloudData.decks;
+            if (cloudData.reviewsHistory) FlashMindState.reviewsHistory = cloudData.reviewsHistory;
+            if (cloudData.chatHistory) FlashMindState.chatHistory = cloudData.chatHistory;
+            
+            localStorage.setItem('FlashMindState_V2', JSON.stringify(FlashMindState));
+          }
+        } else {
+          console.log("Creating new document in Firestore...");
+          await syncDataToCloud(user.uid);
+        }
+      } catch (err) {
+        console.error("Firestore read error:", err);
+        updateCloudSyncUI(false, "Firestore Read Error");
+      }
+      
+      applyProfileElements();
+      if (activeView === 'library') renderLibraryDecks();
+      drawStreakDays();
+      renderChatBubbles();
+    }
+
+    function handleUserSignedOut() {
+      document.getElementById('authLoggedOutView').style.display = 'block';
+      document.getElementById('authLoggedInView').style.display = 'none';
+      
+      updateCloudSyncUI(false, "Status: Local Offline Mode");
+      
+      FlashMindState.user.name = "Guest Scholar";
+      FlashMindState.user.avatar = "👑";
+      
+      applyProfileElements();
+      drawStreakDays();
+    }
+
+    function updateCloudSyncUI(isConnected, text) {
+      const statusEl = document.getElementById('cloudSyncStatus');
+      if (statusEl) {
+        statusEl.innerHTML = isConnected 
+          ? `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981; margin-right:6px;"></span> ${text}`
+          : `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f43f5e; margin-right:6px;"></span> ${text}`;
+      }
+      const profileBtn = document.getElementById('profileAuthBtn');
+      if (profileBtn) {
+        profileBtn.innerText = (auth && auth.currentUser) ? "Manage Sync" : "Sign In to Sync";
+      }
+    }
+
+    async function handleEmailSignIn() {
+      if (!isFirebaseActive || !auth) {
+        showToast("Firebase engine offline.");
+        return;
+      }
+      const email = document.getElementById('authEmail').value.trim();
+      const pass = document.getElementById('authPassword').value;
+      if (!email || !pass) {
+        showToast("Please enter email and password.");
+        return;
+      }
+      const btn = document.getElementById('signInBtn');
+      btn.disabled = true;
+      btn.innerText = "Signing in...";
+      try {
+        await auth.signInWithEmailAndPassword(email, pass);
+        showToast("Logged in successfully!");
+        closeModal('authModal');
+      } catch (err) {
+        showToast(`Login failed: ${err.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span class="material-symbols-outlined">login</span> Log In`;
+      }
+    }
+
+    async function handleEmailSignUp() {
+      if (!isFirebaseActive || !auth) {
+        showToast("Firebase engine offline.");
+        return;
+      }
+      const email = document.getElementById('authEmail').value.trim();
+      const pass = document.getElementById('authPassword').value;
+      if (!email || !pass) {
+        showToast("Please enter email and password.");
+        return;
+      }
+      if (pass.length < 6) {
+        showToast("Password must be at least 6 characters.");
+        return;
+      }
+      const btn = document.getElementById('signUpBtn');
+      btn.disabled = true;
+      btn.innerText = "Creating account...";
+      try {
+        await auth.createUserWithEmailAndPassword(email, pass);
+        showToast("Account created successfully!");
+        closeModal('authModal');
+      } catch (err) {
+        showToast(`Sign up failed: ${err.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Create New Account";
+      }
+    }
+
+    async function handleAnonymousSignIn() {
+      if (!isFirebaseActive || !auth) {
+        showToast("Firebase engine offline.");
+        return;
+      }
+      try {
+        await auth.signInAnonymously();
+        showToast("Anonymous guest signed in!");
+        closeModal('authModal');
+      } catch (err) {
+        showToast(`Guest sign in failed: ${err.message}`);
+      }
+    }
+
+    async function handleSignOut() {
+      if (!isFirebaseActive || !auth) return;
+      try {
+        await auth.signOut();
+        showToast("Logged out successfully.");
+        closeModal('authModal');
+      } catch (err) {
+        showToast("Sign out failed.");
+      }
+    }
+
+    async function forceCloudSync() {
+      if (auth && auth.currentUser) {
+        showToast("Syncing database...");
+        await syncDataToCloud(auth.currentUser.uid);
+      } else {
+        showToast("Please log in first.");
+      }
+    }
+
+    function saveCustomFirebaseConfig() {
+      const apiKey = document.getElementById('fbApiKey').value.trim();
+      const projId = document.getElementById('fbProjectId').value.trim();
+      if (!apiKey || !projId) {
+        showToast("Please fill in custom Coordinates fields.");
+        return;
+      }
+      const customConfig = { apiKey, projectId: projId };
+      localStorage.setItem('FlashMind_CustomFirebase', JSON.stringify(customConfig));
+      showToast("Custom project applied! Reconnecting...");
+      initFirebase();
+    }
+
+    function openAuthModal() {
+      openModal('authModal');
+    }
+
+    function applyProfileElements() {
+      // Sidebar stats
+      document.getElementById('sidebarAvatar').innerText = FlashMindState.user.avatar;
+      document.getElementById('sidebarUserName').innerText = FlashMindState.user.name;
+      document.getElementById('sidebarXP').innerText = `XP: ${FlashMindState.user.xp} · Level ${FlashMindState.user.level}`;
+      
+      // Profile stats
+      const pAvatar = document.getElementById('profileBadgeAvatar');
+      if (pAvatar) pAvatar.innerText = FlashMindState.user.avatar;
+      const pName = document.getElementById('profileName');
+      if (pName) pName.innerText = FlashMindState.user.name;
+      
+      const xpNextLevel = FlashMindState.user.level * 200;
+      const currentLevelMin = (FlashMindState.user.level - 1) * 200;
+      const levelProgress = FlashMindState.user.xp - currentLevelMin;
+      const targetDelta = xpNextLevel - currentLevelMin;
+      const percent = Math.min(100, Math.max(0, (levelProgress / targetDelta) * 100));
+      
+      const xpBar = document.getElementById('profileXPBar');
+      if (xpBar) xpBar.style.width = `${percent}%`;
+      const xpRaw = document.getElementById('profileXPRaw');
+      if (xpRaw) xpRaw.innerText = `${FlashMindState.user.xp} / ${xpNextLevel} XP to next level`;
+      const lvlText = document.getElementById('profileLevelText');
+      if (lvlText) lvlText.innerText = `Level ${FlashMindState.user.level} Scholar · Experience Point Engine`;
+
+      // Main dashboard counters
+      document.getElementById('statTotalDecks').innerText = FlashMindState.decks.length;
+      let totalR = 0;
+      Object.values(FlashMindState.reviewsHistory).forEach(v => totalR += v);
+      document.getElementById('statReviews').innerText = totalR;
+      document.getElementById('statXP').innerText = FlashMindState.user.xp;
+      
+      // Calculate unlocked accomplishments
+      let completedReviews = totalR;
+      let unlockedCount = 0;
+      if (completedReviews >= 1) unlockedCount++;
+      if (FlashMindState.pomodoro.focusMinutes >= 25) unlockedCount++;
+      if (FlashMindState.user.streak >= 5) unlockedCount++;
+      document.getElementById('statMilestones').innerText = unlockedCount;
+    }
+
+    function checkDailyStreak() {
+      const today = new Date().toISOString().split('T')[0];
+      if (FlashMindState.user.lastActive !== today) {
+        if (FlashMindState.user.lastActive) {
+          const lastActiveDate = new Date(FlashMindState.user.lastActive);
+          const diffTime = Math.abs(new Date(today) - lastActiveDate);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          if (diffDays > 1) {
+            FlashMindState.user.streak = 1; // Streak reset
+          } else if (diffDays === 1) {
+            FlashMindState.user.streak += 1; // Streak extended
+          }
+        } else {
+          FlashMindState.user.streak = 1;
+        }
+        FlashMindState.user.lastActive = today;
+        saveState();
+      }
+      renderStreakDisplay();
+    }
+
+    function renderStreakDisplay() {
+      const grid = document.getElementById('streakDayGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+      const streakVal = FlashMindState.user.streak;
+      
+      const countText = document.getElementById('streakDaysCountText');
+      if (countText) {
+        countText.innerText = `${streakVal} Day${streakVal === 1 ? '' : 's'}`;
+      }
+      
+      // Determine today's day of week (0 is Mon, 6 is Sun)
+      const todayIdx = (new Date().getDay() + 6) % 7; 
+      
+      for (let i = 0; i < 7; i++) {
+        let dayClass = '';
+        if (i === todayIdx && streakVal > 0) {
+          dayClass = 'active'; // Today: glowing active indigo-500
+        } else if (i < todayIdx && i >= todayIdx - streakVal + 1) {
+          dayClass = 'completed'; // Past completed days in streak: transparent indigo-500/20
+        } else {
+          dayClass = ''; // Future or missed days: background slate-800
+        }
+        grid.innerHTML += `<div class="streak-day ${dayClass}">${days[i]}</div>`;
+      }
+    }
+
+    function drawStreakDays() {
+      renderStreakDisplay();
+    }
+
+    // --- SPA VIEW CHANGING ENGINE ---
+    function switchView(viewId) {
+      activeView = viewId;
+      document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
+      
+      const targetView = document.getElementById(`view-${viewId}`);
+      if (targetView) targetView.classList.add('active');
+      
+      // Activate correct sidebar trigger
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        if (btn.getAttribute('onclick').includes(viewId)) btn.classList.add('active');
+      });
+      document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+        if (btn.getAttribute('onclick').includes(viewId)) btn.classList.add('active');
+      });
+
+      // Render context dashboard greeting
+      if (viewId === 'dashboard') {
+        const hrs = new Date().getHours();
+        let greet = "Good morning, Scholar";
+        if (hrs >= 12 && hrs < 17) greet = "Good afternoon, Commander";
+        else if (hrs >= 17) greet = "Good evening, Scholar";
+        document.getElementById('greetingMessage').innerText = greet;
+        drawSplineChart();
+      } else if (viewId === 'library') {
+        renderLibraryDecks();
+      } else if (viewId === 'explore') {
+        renderExploreDecks();
+      } else if (viewId === 'profile') {
+        renderContributionMatrix();
+        renderAchievements();
+      }
+    }
+
+    // --- REPLAY CHIPS GENERATION ---
+    function showToast(msg) {
+      const container = document.getElementById('toastContainer');
+      const el = document.createElement('div');
+      el.className = 'toast-alert';
+      el.innerText = msg;
+      container.appendChild(el);
+      setTimeout(() => el.remove(), 3000);
+    }
+
+    // --- FLOATING CANVAS STARS AND CONNECTIVE CONSTELLATIONS ---
+    function initializeBackgroundParticles() {
+      const canvas = document.getElementById('particleCanvas');
+      const ctx = canvas.getContext('2d');
+      
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      particleDots = [];
+      const densityCount = Math.min(65, Math.floor((canvas.width * canvas.height) / 25000));
+      for (let i = 0; i < densityCount; i++) {
+        particleDots.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          vx: (Math.random() - 0.5) * 0.45,
+          vy: (Math.random() - 0.5) * 0.45,
+          r: Math.random() * 2 + 1
+        });
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+        
+        for (let i = 0; i < particleDots.length; i++) {
+          let d = particleDots[i];
+          ctx.beginPath();
+          ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+          ctx.fill();
+          
+          d.x += d.vx;
+          d.y += d.vy;
+          
+          if (d.x < 0 || d.x > canvas.width) d.vx *= -1;
+          if (d.y < 0 || d.y > canvas.height) d.vy *= -1;
+
+          // Connection lines
+          for (let j = i + 1; j < particleDots.length; j++) {
+            let d2 = particleDots[j];
+            let dist = Math.hypot(d.x - d2.x, d.y - d2.y);
+            if (dist < 130) {
+              ctx.strokeStyle = `rgba(124, 92, 255, ${0.12 * (1 - dist / 130)})`;
+              ctx.lineWidth = 0.8;
+              ctx.beginPath();
+              ctx.moveTo(d.x, d.y);
+              ctx.lineTo(d2.x, d2.y);
+              ctx.stroke();
+            }
+          }
+        }
+        requestAnimationFrame(draw);
+      }
+      draw();
+    }
+
+    // --- INTEGRATED NATIVE GRAPH PLANNING ENGINE ---
+    function drawSplineChart() {
+      const canvas = document.getElementById('analyticsCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      
+      // Account for DPI
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+
+      const width = rect.width;
+      const height = rect.height;
+      ctx.clearRect(0,0,width,height);
+
+      // Generate dates for current chart toggle
+      const dataPointsCount = currentChartRange;
+      let chartLabels = [];
+      let chartData = [];
+      
+      const today = new Date();
+      for (let i = dataPointsCount - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(today.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const displayLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        
+        chartLabels.push(displayLabel);
+        // Base value + dynamic values from actual localStorage reviews History
+        const reviewCount = FlashMindState.reviewsHistory[dateStr] || 0;
+        chartData.push(reviewCount);
+      }
+
+      // Render chart elements
+      const paddingLeft = 45;
+      const paddingBottom = 30;
+      const paddingTop = 20;
+      const paddingRight = 20;
+
+      const chartW = width - paddingLeft - paddingRight;
+      const chartH = height - paddingTop - paddingBottom;
+
+      // Draw horizontal grids
+      const maxVal = Math.max(15, Math.max(...chartData) + 4);
+      const gridCount = 4;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+      ctx.lineWidth = 1;
+      ctx.fillStyle = "rgba(156, 163, 175, 0.6)";
+      ctx.font = "10px Inter";
+      
+      for (let i = 0; i <= gridCount; i++) {
+        const y = paddingTop + (chartH / gridCount) * i;
+        const val = Math.round(maxVal - (maxVal / gridCount) * i);
+        ctx.beginPath();
+        ctx.moveTo(paddingLeft, y);
+        ctx.lineTo(width - paddingRight, y);
+        ctx.stroke();
+        ctx.fillText(val, 12, y + 4);
+      }
+
+      // Map coordinates
+      let points = [];
+      const colWidth = chartW / (dataPointsCount - 1);
+      for (let i = 0; i < dataPointsCount; i++) {
+        const px = paddingLeft + i * colWidth;
+        const py = paddingTop + chartH - (chartData[i] / maxVal) * chartH;
+        points.push({ x: px, y: py, val: chartData[i], label: chartLabels[i] });
+      }
+
+      // Draw transparent color highlight gradient underneath curve
+      const grad = ctx.createLinearGradient(0, paddingTop, 0, height - paddingBottom);
+      grad.addColorStop(0, "rgba(124, 92, 255, 0.25)");
+      grad.addColorStop(1, "rgba(124, 92, 255, 0)");
+
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, height - paddingBottom);
+      ctx.lineTo(points[0].x, points[0].y);
+      for (let i = 0; i < points.length - 1; i++) {
+        const xc = (points[i].x + points[i+1].x) / 2;
+        const yc = (points[i].y + points[i+1].y) / 2;
+        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+      }
+      ctx.lineTo(points[points.length-1].x, points[points.length-1].y);
+      ctx.lineTo(points[points.length-1].x, height - paddingBottom);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Draw the glowing spline path
+      ctx.strokeStyle = "#a855f7";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 0; i < points.length - 1; i++) {
+        const xc = (points[i].x + points[i+1].x) / 2;
+        const yc = (points[i].y + points[i+1].y) / 2;
+        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+      }
+      ctx.lineTo(points[points.length-1].x, points[points.length-1].y);
+      ctx.stroke();
+
+      // Draw points and values
+      points.forEach((p, idx) => {
+        const shouldShowLabel = currentChartRange === 7 || idx % Math.round(currentChartRange/6) === 0;
+        
+        if (shouldShowLabel) {
+          ctx.fillStyle = "rgba(156, 163, 175, 0.8)";
+          ctx.fillText(p.label, p.x - 15, height - 10);
+        }
+
+        // Accent nodes
+        ctx.fillStyle = "#06b6d4";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function toggleChartRange(days, btn) {
+      currentChartRange = days;
+      document.querySelectorAll('.chart-toggle').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      drawSplineChart();
+    }
+
+    // --- DECK LIBRARY ENGINE ---
+    let activeDeckLayout = "grid";
+
+    function toggleLibraryLayout(mode) {
+      activeDeckLayout = mode;
+      document.getElementById('btnGrid').classList.toggle('active', mode === 'grid');
+      document.getElementById('btnList').classList.toggle('active', mode === 'list');
+      renderLibraryDecks();
+    }
+
+    function renderLibraryDecks() {
+      const grid = document.getElementById('decksLibraryGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      const query = document.getElementById('deckSearch').value.toLowerCase();
+      const matched = FlashMindState.decks.filter(d => 
+        d.name.toLowerCase().includes(query) || d.tags.some(t => t.toLowerCase().includes(query))
+      );
+
+      if (activeDeckLayout === 'list') {
+        grid.classList.add('list-view');
+      } else {
+        grid.classList.remove('list-view');
+      }
+
+      if (matched.length === 0) {
+        grid.innerHTML = `<div class="glass-card" style="grid-column: 1/-1; text-align:center; padding: 48px;">
+          <h3>No decks match your criteria.</h3>
+          <p style="color:var(--text-muted); margin-top: 10px;">Click "Create Deck" to initialize a customized database module.</p>
+        </div>`;
+        return;
+      }
+
+      matched.forEach(d => {
+        let tagHtml = d.tags.map(t => `<span class="tag-badge">#${t}</span>`).join('');
+        grid.innerHTML += `
+          <div class="glass-card deck-card">
+            <div class="deck-top">
+              <div style="display:flex; justify-content:space-between; align-items:start;">
+                <h3>${d.name}</h3>
+                <button onclick="deleteDeck('${d.id}')" style="background:none; border:none; color:rgba(244,63,94,0.6); cursor:pointer;">
+                  <span class="material-symbols-outlined" style="font-size:18px;">delete</span>
+                </button>
+              </div>
+              <div class="deck-tags">${tagHtml}</div>
+            </div>
+            <div class="deck-card-meta">
+              <span>${d.cards.length} cards in stack</span>
+              <div class="deck-btn-group">
+                <button class="btn-small" onclick="openCardManager('${d.id}')">Add/Edit</button>
+                <button class="btn-small btn-primary" onclick="triggerStudySession('${d.id}')">Study Stack</button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // --- DECK MODAL TRIGGERS ---
+    function openModal(id) {
+      document.getElementById(id).classList.add('active');
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    function saveNewDeck() {
+      const name = document.getElementById('newDeckName').value.trim();
+      const tagsStr = document.getElementById('newDeckTags').value.trim();
+      if (!name) {
+        showToast("Deck Title is required.");
+        return;
+      }
+
+      const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()) : [];
+      const newDeck = {
+        id: "deck-" + Date.now(),
+        name: name,
+        tags: tags,
+        cards: []
+      };
+
+      FlashMindState.decks.push(newDeck);
+      saveState();
+      closeModal('createDeckModal');
+      renderLibraryDecks();
+      
+      // Clear inputs
+      document.getElementById('newDeckName').value = '';
+      document.getElementById('newDeckTags').value = '';
+      showToast(`Created deck "${name}" successfully.`);
+    }
+
+    function deleteDeck(id) {
+      if (confirm("Are you sure you want to permanently delete this deck? All flashcard contents will be deleted.")) {
+        FlashMindState.decks = FlashMindState.decks.filter(d => d.id !== id);
+        saveState();
+        renderLibraryDecks();
+        showToast("Deck successfully deleted.");
+      }
+    }
+
+    // --- FLASHCARD LIST MANAGER & INJECTOR ---
+    function openCardManager(deckId) {
+      currentSelectedDeckId = deckId;
+      const deck = FlashMindState.decks.find(d => d.id === deckId);
+      if (!deck) return;
+
+      document.getElementById('managerDeckTitle').innerText = `Manage: ${deck.name}`;
+      renderManagerCards();
+      openModal('cardManagerModal');
+    }
+
+    function renderManagerCards() {
+      const container = document.getElementById('managerCardsList');
+      container.innerHTML = '';
+      const deck = FlashMindState.decks.find(d => d.id === currentSelectedDeckId);
+      if (!deck) return;
+
+      if (deck.cards.length === 0) {
+        container.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding: 12px;">This deck is currently empty. Inject a card below to begin.</p>`;
+        return;
+      }
+
+      deck.cards.forEach((c, index) => {
+        container.innerHTML += `
+          <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-glass); border-radius:8px; padding:10px 14px; margin-bottom: 8px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="max-width:85%;">
+              <p style="font-weight:600; font-size:13px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">Q: ${c.front}</p>
+              <p style="font-size:11px; color:var(--text-muted); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">A: ${c.back}</p>
+            </div>
+            <button onclick="removeCardFromDeck('${c.id}')" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
+              <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+            </button>
+          </div>
+        `;
+      });
+    }
+
+    function injectNewCardToDeck() {
+      const f = document.getElementById('newCardFront').value.trim();
+      const b = document.getElementById('newCardBack').value.trim();
+      if (!f || !b) {
+        showToast("Both front and back card details are required.");
+        return;
+      }
+
+      const deck = FlashMindState.decks.find(d => d.id === currentSelectedDeckId);
+      if (!deck) return;
+
+      const newC = {
+        id: "card-" + Date.now(),
+        front: f,
+        back: b,
+        difficulty: "medium",
+        interval: 0,
+        easeFactor: 2.5,
+        repetitions: 0,
+        nextReview: 0
+      };
+
+      deck.cards.push(newC);
+      saveState();
+      renderManagerCards();
+      renderLibraryDecks();
+
+      document.getElementById('newCardFront').value = '';
+      document.getElementById('newCardBack').value = '';
+      showToast("Card injected successfully!");
+    }
+
+    function removeCardFromDeck(cardId) {
+      const deck = FlashMindState.decks.find(d => d.id === currentSelectedDeckId);
+      if (!deck) return;
+
+      deck.cards = deck.cards.filter(c => c.id !== cardId);
+      saveState();
+      renderManagerCards();
+      renderLibraryDecks();
+      showToast("Card deleted.");
+    }
+
+    // --- SPACED REPETITION STUDY ENGINE (SM-2) ---
+    function triggerStudySession(deckId) {
+      const deck = FlashMindState.decks.find(d => d.id === deckId);
+      if (!deck || deck.cards.length === 0) {
+        showToast("No cards inside this deck database to review.");
+        return;
+      }
+
+      currentStudyCards = [...deck.cards];
+      currentStudyIndex = 0;
+      currentSelectedDeckId = deckId;
+
+      document.getElementById('studyDeckTitle').innerText = deck.name;
+      document.getElementById('flashcardInner').classList.remove('flipped');
+      document.getElementById('ratingControls').classList.remove('active');
+      
+      document.getElementById('activeStudyFrame').style.display = 'flex';
+      document.getElementById('studyClearedScreen').style.display = 'none';
+
+      renderActiveStudyCard();
+      openModal('studyTheater');
+    }
+
+    function renderActiveStudyCard() {
+      if (currentStudyIndex >= currentStudyCards.length) {
+        // Deck completed!
+        document.getElementById('activeStudyFrame').style.display = 'none';
+        document.getElementById('studyClearedScreen').style.display = 'flex';
+        
+        // Award XP
+        FlashMindState.user.xp += 50;
+        if (FlashMindState.user.xp >= FlashMindState.user.level * 200) {
+          FlashMindState.user.level += 1;
+          showToast(`Level UP! Welcome to level ${FlashMindState.user.level}!`);
+        }
+        
+        // Register review density in contribution heatmap
+        const todayStr = new Date().toISOString().split('T')[0];
+        FlashMindState.reviewsHistory[todayStr] = (FlashMindState.reviewsHistory[todayStr] || 0) + currentStudyCards.length;
+        
+        saveState();
+        return;
+      }
+
+      const c = currentStudyCards[currentStudyIndex];
+      document.getElementById('studyFrontText').innerText = c.front;
+      document.getElementById('studyBackText').innerText = c.back;
+
+      const progressPercent = (currentStudyIndex / currentStudyCards.length) * 100;
+      document.getElementById('studyProgressBar').style.width = `${progressPercent}%`;
+      document.getElementById('studyProgressRatio').innerText = `${currentStudyIndex + 1} / ${currentStudyCards.length}`;
+
+      document.getElementById('flashcardInner').classList.remove('flipped');
+      document.getElementById('ratingControls').classList.remove('active');
+    }
+
+    function flipActiveCard() {
+      const inner = document.getElementById('flashcardInner');
+      inner.classList.add('flipped');
+      document.getElementById('ratingControls').classList.add('active');
+    }
+
+    function gradeActiveCard(q) {
+      // SuperMemo SM-2 interval calculations
+      const deck = FlashMindState.decks.find(d => d.id === currentSelectedDeckId);
+      if (!deck) return;
+      
+      const cardRef = deck.cards.find(c => c.id === currentStudyCards[currentStudyIndex].id);
+      if (!cardRef) return;
+
+      let rep = cardRef.repetitions || 0;
+      let ease = cardRef.easeFactor || 2.5;
+      let interval = cardRef.interval || 0;
+
+      if (q >= 3) { // Recalled successfully
+        if (rep === 0) {
+          interval = 1;
+        } else if (rep === 1) {
+          interval = 6;
+        } else {
+          interval = Math.round(interval * ease);
+        }
+        rep += 1;
+      } else { // Hard or fail
+        rep = 0;
+        interval = 1;
+      }
+
+      ease = ease + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
+      if (ease < 1.3) ease = 1.3;
+
+      cardRef.repetitions = rep;
+      cardRef.easeFactor = parseFloat(ease.toFixed(2));
+      cardRef.interval = interval;
+      cardRef.nextReview = Date.now() + interval * 24 * 60 * 60 * 1000;
+
+      saveState();
+
+      // Go next card smoothly
+      currentStudyIndex++;
+      setTimeout(() => {
+        renderActiveStudyCard();
+      }, 200);
+    }
+
+    function exitStudyTheater() {
+      closeModal('studyTheater');
+      applyProfileElements();
+    }
+
+    // --- PUBLIC EXPLORE / DISCOVERY ENGINE ---
+    function renderExploreDecks() {
+      const grid = document.getElementById('exploreDecksGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      const matched = EXPLORE_DECKS_CURATED.filter(d => 
+        currentExploreFilter === 'all' || d.category === currentExploreFilter
+      );
+
+      matched.forEach(d => {
+        grid.innerHTML += `
+          <div class="glass-card explore-card">
+            <div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                <span class="tag-badge" style="background:rgba(6,182,212,0.1); border-color:rgba(6,182,212,0.2); color:#06b6d4;">${d.category.toUpperCase()}</span>
+                <span style="font-size:11px; color:var(--text-muted);">${d.author}</span>
+              </div>
+              <h3 style="font-family:var(--font-display); font-size:18px; margin-bottom:8px;">${d.name}</h3>
+              <p style="font-size:13px; color:var(--text-muted); line-height:1.4;">${d.desc}</p>
+            </div>
+            <div class="deck-card-meta">
+              <span>${d.cardsCount} cards</span>
+              <button class="action-btn" style="padding: 6px 14px; font-size: 11px; height: auto;" onclick="importExploreDeck('${d.id}')">
+                <span class="material-symbols-outlined" style="font-size:14px;">download</span> Import
+              </button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function filterExploreDecks(cat, btn) {
+      currentExploreFilter = cat;
+      document.querySelectorAll('#view-explore .chat-chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderExploreDecks();
+    }
+
+    function importExploreDeck(id) {
+      const expD = EXPLORE_DECKS_CURATED.find(d => d.id === id);
+      if (!expD) return;
+
+      // Deep copy to prevent reference errors
+      const copiedDeck = {
+        id: "deck-" + Date.now(),
+        name: expD.name + " (Curated)",
+        tags: [expD.category, "imported"],
+        cards: JSON.parse(JSON.stringify(expD.cards))
+      };
+
+      FlashMindState.decks.push(copiedDeck);
+      saveState();
+      showToast(`Imported "${expD.name}" to private library!`);
+    }
+
+    // --- HISTORICAL 365-DAY DENSITY HEATMAP ---
+    function renderContributionMatrix() {
+      const container = document.getElementById('heatmapContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const today = new Date();
+      const startDate = new Date();
+      startDate.setDate(today.getDate() - 364);
+
+      let current = new Date(startDate);
+      let html = '';
+
+      for (let i = 0; i < 365; i++) {
+        const dateStr = current.toISOString().split('T')[0];
+        const count = FlashMindState.reviewsHistory[dateStr] || 0;
+
+        let colorStyle = "rgba(255, 255, 255, 0.03)";
+        if (count > 0 && count <= 2) colorStyle = "#3b0764";
+        else if (count > 2 && count <= 5) colorStyle = "#6b21a8";
+        else if (count > 5 && count <= 10) colorStyle = "#a855f7";
+        else if (count > 10) colorStyle = "#06b6d4";
+
+        html += `<div class="heat-box" style="width:10px; height:10px; border-radius:2px; background:${colorStyle}; transition:all 0.2s;" title="${dateStr}: ${count} reviews"></div>`;
+        current.setDate(current.getDate() + 1);
+      }
+      container.innerHTML = html;
+    }
+
+    function renderAchievements() {
+      const container = document.getElementById('achievementsGrid');
+      if (!container) return;
+      container.innerHTML = '';
+
+      let totalReviews = 0;
+      Object.values(FlashMindState.reviewsHistory).forEach(v => totalReviews += v);
+
+      const badges = [
+        { title: "First Ascent", desc: "Complete 1 card review", icon: "🚀", unlocked: totalReviews >= 1 },
+        { title: "Flow Catalyst", desc: "Focus for 25 total Pomodoro mins", icon: "🧘", unlocked: FlashMindState.pomodoro.focusMinutes >= 25 },
+        { title: "Eternal Spark", desc: "Maintain a 5+ day streak", icon: "🔥", unlocked: FlashMindState.user.streak >= 5 },
+        { title: "Cognitive Archon", desc: "Gain 300+ total experience points", icon: "🧠", unlocked: FlashMindState.user.xp >= 300 }
+      ];
+
+      badges.forEach(b => {
+        container.innerHTML += `
+          <div class="glass-card badge-card ${b.unlocked ? '' : 'locked'}">
+            <span class="badge-icon">${b.icon}</span>
+            <div class="badge-info">
+              <h4>${b.title}</h4>
+              <p>${b.desc}</p>
+              <span style="font-size:9px; font-weight:700; color: ${b.unlocked ? '#06b6d4' : 'var(--text-muted)'};">
+                ${b.unlocked ? 'UNLOCKED' : 'LOCKED'}
+              </span>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // --- PRODUCTIVITY POMODORO CLOCK ENGINE ---
+    function togglePomo() {
+      const ring = document.getElementById('pomoProgressRing');
+      const digits = document.getElementById('pomoDigits');
+      const widgetDigits = document.getElementById('widgetDigits');
+      const playBtn = document.getElementById('pomoPlayBtn');
+      const widgetIcon = document.getElementById('widgetPlayIcon');
+
+      if (FlashMindState.pomodoro.isActive) {
+        // Pause timer
+        clearInterval(pomoInterval);
+        FlashMindState.pomodoro.isActive = false;
+        playBtn.innerHTML = '<span class="material-symbols-outlined">play_arrow</span>';
+        widgetIcon.innerText = "play_arrow";
+      } else {
+        // Start/Resume timer
+        FlashMindState.pomodoro.isActive = true;
+        playBtn.innerHTML = '<span class="material-symbols-outlined">pause</span>';
+        widgetIcon.innerText = "pause";
+
+        pomoInterval = setInterval(() => {
+          FlashMindState.pomodoro.timeLeft--;
+          updatePomoVisuals();
+
+          if (FlashMindState.pomodoro.timeLeft <= 0) {
+            clearInterval(pomoInterval);
+            triggerPomoAlert();
+          }
+        }, 1000);
+      }
+      saveState();
+    }
+
+    function resetPomo() {
+      clearInterval(pomoInterval);
+      FlashMindState.pomodoro.isActive = false;
+      const mins = FlashMindState.pomodoro.mode === 'work' ? FlashMindState.pomodoro.workMins : FlashMindState.pomodoro.breakMins;
+      FlashMindState.pomodoro.timeLeft = mins * 60;
+      FlashMindState.pomodoro.duration = mins * 60;
+      
+      const playBtn = document.getElementById('pomoPlayBtn');
+      if (playBtn) playBtn.innerHTML = '<span class="material-symbols-outlined">play_arrow</span>';
+      const widgetIcon = document.getElementById('widgetPlayIcon');
+      if (widgetIcon) widgetIcon.innerText = "play_arrow";
+
+      updatePomoVisuals();
+      saveState();
+    }
+
+    function updatePomoVisuals() {
+      const left = FlashMindState.pomodoro.timeLeft;
+      const duration = FlashMindState.pomodoro.duration;
+      
+      const m = Math.floor(left / 60);
+      const s = left % 60;
+      const digitsStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      
+      document.getElementById('pomoDigits').innerText = digitsStr;
+      document.getElementById('widgetDigits').innerText = digitsStr;
+
+      // Update SVG circular ring dash-offset
+      const ring = document.getElementById('pomoProgressRing');
+      const radius = 90;
+      const circumference = 2 * Math.PI * radius;
+      const percent = left / duration;
+      const offset = circumference - percent * circumference;
+      ring.style.strokeDashoffset = offset;
+
+      document.getElementById('pomoModeBadge').innerText = FlashMindState.pomodoro.mode === 'work' ? "WORK FRAME" : "BREAK FRAME";
+      document.getElementById('widgetLabel').innerText = FlashMindState.pomodoro.mode === 'work' ? "Focus" : "Break";
+    }
+
+    function skipPomoMode() {
+      FlashMindState.pomodoro.mode = FlashMindState.pomodoro.mode === 'work' ? 'break' : 'work';
+      resetPomo();
+    }
+
+    function applyCustomPomoSettings() {
+      const work = parseInt(document.getElementById('pomoWorkSetting').value) || 25;
+      const brk = parseInt(document.getElementById('pomoBreakSetting').value) || 5;
+      
+      FlashMindState.pomodoro.workMins = work;
+      FlashMindState.pomodoro.breakMins = brk;
+      
+      resetPomo();
+    }
+
+    function triggerPomoAlert() {
+      try {
+        // Electronic synth beep note (Web Audio)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15); // A5
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.8);
+      } catch (e) {}
+
+      showToast(FlashMindState.pomodoro.mode === 'work' ? "Focus session complete! Take a break." : "Break cycle finished! Get back to study.");
+      
+      if (FlashMindState.pomodoro.mode === 'work') {
+        FlashMindState.pomodoro.sessionCount++;
+        FlashMindState.pomodoro.focusMinutes += FlashMindState.pomodoro.workMins;
+        document.getElementById('pomoSessionStat').innerText = FlashMindState.pomodoro.sessionCount;
+        document.getElementById('pomoMinutesStat').innerText = FlashMindState.pomodoro.focusMinutes;
+      }
+
+      // Auto switch focus cycles
+      skipPomoMode();
+    }
+
+    // --- FLOATING MICRO-WIDGET DRAG IMPLEMENTATION ---
+    function initializeDraggableWidget() {
+      const widget = document.getElementById('draggableWidget');
+      
+      widget.addEventListener('mousedown', (e) => {
+        if (e.target.closest('button')) return;
+        isDragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        widgetStartX = widget.offsetLeft;
+        widgetStartY = widget.offsetTop;
+        widget.style.cursor = 'grabbing';
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - dragStartX;
+        const dy = e.clientY - dragStartY;
+        
+        let newX = widgetStartX + dx;
+        let newY = widgetStartY + dy;
+        
+        // Boundaries checks
+        newX = Math.max(10, Math.min(window.innerWidth - widget.offsetWidth - 10, newX));
+        newY = Math.max(10, Math.min(window.innerHeight - widget.offsetHeight - 10, newY));
+        
+        widget.style.left = `${newX}px`;
+        widget.style.top = `${newY}px`;
+      });
+
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+        widget.style.cursor = 'grab';
+      });
+
+      // Mobile touch support
+      widget.addEventListener('touchstart', (e) => {
+        if (e.target.closest('button')) return;
+        isDragging = true;
+        const touch = e.touches[0];
+        dragStartX = touch.clientX;
+        dragStartY = touch.clientY;
+        widgetStartX = widget.offsetLeft;
+        widgetStartY = widget.offsetTop;
+      }, { passive: true });
+
+      document.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        if (e.cancelable) e.preventDefault();
+        const touch = e.touches[0];
+        const dx = touch.clientX - dragStartX;
+        const dy = touch.clientY - dragStartY;
+        
+        let newX = widgetStartX + dx;
+        let newY = widgetStartY + dy;
+        
+        newX = Math.max(10, Math.min(window.innerWidth - widget.offsetWidth - 10, newX));
+        newY = Math.max(10, Math.min(window.innerHeight - widget.offsetHeight - 10, newY));
+        
+        widget.style.left = `${newX}px`;
+        widget.style.top = `${newY}px`;
+      }, { passive: false });
+
+      document.addEventListener('touchend', () => {
+        isDragging = false;
+      });
+      
+      // Default initial top/left position on desktop
+      widget.style.top = "80px";
+      widget.style.left = `${window.innerWidth - 150}px`;
+    }
+
+    // --- GEMINI STUDY CHATBOT PANEL ---
+    function toggleChatPanel() {
+      const p = document.getElementById('geminiChatPanel');
+      p.classList.toggle('active');
+    }
+
+    function formatMarkdown(text) {
+      // Basic secure regex-based MD translation
+      let f = text.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+      f = f.replace(/`([^`]+)`/g, '<code>$1</code>');
+      f = f.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      f = f.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      f = f.replace(/^\s*-\s+(.+)$/gm, '<li>$1</li>');
+      f = f.replace(/(<li>.*<\/li>)/g, '<ul>$1</ul>');
+      f = f.replace(/<\/ul>\s*<ul>/g, '');
+      f = f.replace(/\n/g, '<br>');
+      return f;
+    }
+
+    function renderChatBubbles() {
+      const flow = document.getElementById('chatMessageFlow');
+      flow.innerHTML = '';
+      
+      // Starter instructions warning notice
+      flow.innerHTML += `
+        <div class="chat-bubble bot" style="font-size:11px; opacity: 0.8; border-color: rgba(245, 158, 11, 0.2); background: rgba(245,158,11,0.02);">
+          ⚠️ <strong>Security Notice</strong>: Your API credentials remain secure inside the host Android SDK local framework context. Do not expose generated APKs containing valid private keys to public channels.
+        </div>
+      `;
+
+      FlashMindState.chatHistory.forEach(m => {
+        const isBot = m.role === 'model';
+        const formatted = formatMarkdown(m.parts[0].text);
+        
+        flow.innerHTML += `
+          <div class="chat-bubble ${isBot ? 'bot' : 'user'}">
+            ${formatted}
+          </div>
+        `;
+      });
+      flow.scrollTop = flow.scrollHeight;
+    }
+
+    function addBotMessage(text) {
+      FlashMindState.chatHistory.push({
+        role: "model",
+        parts: [{ text: text }]
+      });
+      renderChatBubbles();
+    }
+
+    function showTypingIndicator() {
+      const flow = document.getElementById('chatMessageFlow');
+      const ind = document.createElement('div');
+      ind.id = "chatTypingIndicator";
+      ind.className = "chat-bubble bot";
+      ind.innerHTML = `<span style="opacity: 0.6; animation: blink 1s infinite;">System compiling study vector...</span>`;
+      flow.appendChild(ind);
+      flow.scrollTop = flow.scrollHeight;
+    }
+
+    function hideTypingIndicator() {
+      const el = document.getElementById('chatTypingIndicator');
+      if (el) el.remove();
+    }
+
+    async function sendGeminiMessage(messageText) {
+      if (!window.GEMINI_API_KEY || window.GEMINI_API_KEY === 'MY_GEMINI_API_KEY' || window.GEMINI_API_KEY === '') {
+        addBotMessage("⚠️ **API Credentials Missing.** Please declare your `GEMINI_API_KEY` inside the AI Studio Secrets panel.");
+        return;
+      }
+
+      FlashMindState.chatHistory.push({
+        role: "user",
+        parts: [{ text: messageText }]
+      });
+      
+      renderChatBubbles();
+      showTypingIndicator();
+
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${window.GEMINI_API_KEY}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: FlashMindState.chatHistory,
+            systemInstruction: {
+              parts: [{ text: "You are FlashMind AI, an expert study mentor. Help users understand topics, create high-quality flashcards (using format: Q: [Question] | A: [Answer]), and give spaced repetition tips. Keep explanations concise, clear, and encouraging." }]
+            }
+          })
+        });
+
+        hideTypingIndicator();
+
+        if (!response.ok) {
+          const errText = await response.text();
+          addBotMessage(`⚠️ **Endpoint Error:** (${response.status}) - Verify your credentials.`);
+          return;
+        }
+
+        const data = await response.json();
+        const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || "No reply was generated.";
+        
+        addBotMessage(replyText);
+
+        // Detect if the response contains cards and parse them
+        parseAIInjectedCards(replyText);
+
+      } catch (err) {
+        hideTypingIndicator();
+        addBotMessage(`⚠️ **Connection Error:** ${err.message}`);
+      }
+    }
+
+    function parseAIInjectedCards(text) {
+      // Match card structure Q: [Question] | A: [Answer]
+      const regex = /Q:\s*(.*?)\s*\|\s*A:\s*(.*?)(?=\n|Q:|$)/gi;
+      let match;
+      let count = 0;
+      
+      while ((match = regex.exec(text)) !== null) {
+        const q = match[1].trim();
+        const a = match[2].trim();
+        
+        if (q && a) {
+          // Put inside the first general deck
+          let generalDeck = FlashMindState.decks[0];
+          if (generalDeck) {
+            generalDeck.cards.push({
+              id: "card-ai-" + Date.now() + Math.random().toString(36).substr(2, 4),
+              front: q,
+              back: a,
+              difficulty: "medium",
+              interval: 0,
+              easeFactor: 2.5,
+              repetitions: 0,
+              nextReview: 0
+            });
+            count++;
+          }
+        }
+      }
+
+      if (count > 0) {
+        saveState();
+        showToast(`AI added ${count} flashcard(s) to "${FlashMindState.decks[0].name}"!`);
+        if (activeView === 'library') renderLibraryDecks();
+      }
+    }
+
+    function handleChatEnter(e) {
+      if (e.key === 'Enter') triggerChatSubmit();
+    }
+
+    function triggerChatSubmit() {
+      const input = document.getElementById('chatInputField');
+      const val = input.value.trim();
+      if (!val) return;
+      
+      sendGeminiMessage(val);
+      input.value = '';
+    }
+
+    function sendQuickChip(text) {
+      sendGeminiMessage(text);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "FlashMind",
+  "description": "FlashMind: Learn anything faster with spaced repetition flashcards, Pomodoro focus tracker, gamified stats, and a custom Gemini study assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
